@@ -23,6 +23,15 @@ class Penalty extends GameState
 
     public function onEnteringState(int $activePlayerId)
     {
+        $playerId = (int)$activePlayerId;
+        $handCount = (int)$this->game->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_location='hand' AND card_location_arg=$playerId");
+        if ($handCount === 0) {
+            $this->bga->notify->all("message", clienttranslate('${player_name} has no cards in hand to take a penalty from.'), [
+                'player_name' => $this->game->getPlayerNameById($playerId)
+            ]);
+            return RefillHand::class;
+        }
+
         $boardingHappened = $this->game->getGameStateValue('boarding_happened');
         if ($boardingHappened) {
             $this->bga->notify->all("message", clienttranslate('${player_name} avoids a penalty because boarding happened this turn.'), [

@@ -1037,7 +1037,6 @@ export class Game {
         
         // Setting up player boards
         Object.values(gamedatas.players).forEach(player => {
-            console.log(gamedatas.players)
             this.bga.playerPanels.getElement(player.id).insertAdjacentHTML('beforeend', `
                 <div class="buu_player-panel-stats">
                     <div class="buu_stat-row">

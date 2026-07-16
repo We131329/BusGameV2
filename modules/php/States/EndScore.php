@@ -93,12 +93,12 @@ class EndScore extends \Bga\GameFramework\States\GameState
             $this->game->bga->playerStats->set($roundStat, $scoreDetails['total'], $pId);
 
             // Update DB
-            $this->game->bga->playerScore->inc($scoreDetails['total'], $pId);
+            $this->game->bga->playerScore->inc($pId, $scoreDetails['total']);
 
             // Tiebreaker: Most Passengers (only at the end of Round 2)
             if ($round === 2) {
                 $totalPassengers = count($passengers);
-                $this->game->bga->playerScoreAux->set($totalPassengers, $pId);
+                $this->game->bga->playerScoreAux->set($pId, $totalPassengers);
             }
         }
 

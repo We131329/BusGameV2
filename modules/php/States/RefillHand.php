@@ -24,9 +24,13 @@ class RefillHand extends GameState
 
     public function onEnteringState(int $activePlayerId)
     {
-        $args = $this->getArgs();
         $playerId = (int)$activePlayerId;
+        $handCount = (int)$this->game->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_location='hand' AND card_location_arg=$playerId");
+        if ($handCount === 0) {
+            return NextPlayer::class;
+        }
 
+        $args = $this->getArgs();
         if ($args['missingBuses'] === 0 && $args['missingPassengers'] === 0) {
             $msg = "";
             if ($args['missingBusesRaw'] === 0 && $args['missingPassengersRaw'] === 0) {
