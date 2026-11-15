@@ -100,7 +100,7 @@ $this->passenger_types = [
     PASSENGER_BABY => [
         'name' => clienttranslate('The Baby'),
         'capacity' => 1,
-        'description' => clienttranslate('Always prioritized in the Waiting Room (moves to row 4).'),
+        'description' => clienttranslate('Gets priority in the Waiting Room (moves to Row 4 and must board first). From your hand on your turn, can board any bus of its color on the platform.'),
     ],
 ];
 

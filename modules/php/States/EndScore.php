@@ -124,9 +124,15 @@ class EndScore extends \Bga\GameFramework\States\GameState
         }
 
         if ($round < 2) {
-            // Determine starting player for round 2 (highest player_score)
-            $sql = "SELECT player_id FROM player ORDER BY player_score DESC, player_id ASC LIMIT 1";
-            $startingPlayerId = (int)$this->game->getUniqueValueFromDB($sql);
+            // Determine starting player for round 2 (highest player_score using up-to-date $newScores)
+            $startingPlayerId = (int) array_key_first($newScores);
+            $maxScore = PHP_INT_MIN;
+            foreach ($newScores as $pId => $score) {
+                if ($score > $maxScore) {
+                    $maxScore = $score;
+                    $startingPlayerId = (int) $pId;
+                }
+            }
             $this->game->gamestate->changeActivePlayer($startingPlayerId);
 
             $this->prepareNextRound();
@@ -179,9 +185,14 @@ class EndScore extends \Bga\GameFramework\States\GameState
 
         $this->game->applyBabyPriority();
         
-        // Reset turn trigger
+        // Reset turn and state values
         $this->game->setGameStateValue('round_end_trigger', 0);
         $this->game->setGameStateValue('remaining_turns', 0);
+        $this->game->setGameStateValue('active_bus_id', 0);
+        $this->game->setGameStateValue('boarding_happened', 0);
+        $this->game->setGameStateValue('drunkard_bus_id', 0);
+        $this->game->setGameStateValue('corrupter_swaps_pending', 0);
+        $this->game->setGameStateValue('bus_departed_during_corrupter', 0);
 
         // 7. Notify all players about the public setup
         $this->game->bga->notify->all("newRound", clienttranslate('Starting Round 2!'), [

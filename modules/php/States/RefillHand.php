@@ -55,6 +55,9 @@ class RefillHand extends GameState
     public function getArgs(): array
     {
         $playerId = (int) $this->game->getActivePlayerId();
+        if (!$playerId) {
+            $playerId = (int) $this->game->getCurrentPlayerId();
+        }
         $hand = $this->game->cards->getCardsInLocation('hand', $playerId);
 
         $busCountInHand = count(array_filter($hand, fn($c) => $c->type === 'bus'));
@@ -85,19 +88,40 @@ class RefillHand extends GameState
     public function actRefill(string $cardIds)
     {
         $playerId = (int) $this->game->getActivePlayerId();
+        if (!$playerId) {
+            $playerId = (int) $this->game->getCurrentPlayerId();
+        }
         $ids = array_filter(array_map('intval', explode(',', $cardIds)));
         
-        // Logic for refilling (e.g. up to a certain hand size)
+        $currentHand = $this->game->cards->getCardsInLocation('hand', $playerId);
+        $currentBusCount = count(array_filter($currentHand, fn($c) => $c->type === 'bus'));
+        $currentPassCount = count(array_filter($currentHand, fn($c) => $c->type === 'passenger'));
+
+        $validIds = [];
         foreach ($ids as $cardId) {
-            $this->game->cards->moveCard($cardId, 'hand', $playerId);
+            $card = $this->game->cards->getCard($cardId);
+            if (!$card) continue;
+            if ($card->type === 'bus') {
+                if ($currentBusCount < 2) {
+                    $this->game->cards->moveCard($cardId, 'hand', $playerId);
+                    $currentBusCount++;
+                    $validIds[] = $cardId;
+                }
+            } else if ($card->type === 'passenger') {
+                if ($currentPassCount < 7) {
+                    $this->game->cards->moveCard($cardId, 'hand', $playerId);
+                    $currentPassCount++;
+                    $validIds[] = $cardId;
+                }
+            }
         }
         
-        if (!empty($ids)) {
+        if (!empty($validIds)) {
             $this->bga->notify->all("handRefilled", clienttranslate('${player_name} refills hand with ${count} cards'), [
                 "player_id" => $playerId,
                 "player_name" => $this->game->getPlayerNameById($playerId),
-                "count" => count($ids),
-                "card_ids" => $ids,
+                "count" => count($validIds),
+                "card_ids" => $validIds,
             ]);
         }
 

@@ -27,23 +27,20 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
      */
     function onEnteringState(int $activePlayerId) {
 
-        // 1. Cleanup Waiting Room: slide down (Pushes all cards towards row 4)
+        // 1. Cleanup Waiting Room: deterministically compact each column down towards row 4
         $moved = false;
         for ($col = 1; $col <= 2; $col++) {
-            // Repeat up to 3 times to ensure all gaps are closed
-            for ($i = 0; $i < 3; $i++) {
-                for ($row = 3; $row >= 1; $row--) {
-                    $pos = $col * 10 + $row;
-                    $sql = "SELECT * FROM card WHERE card_location = 'waiting_room' AND card_location_arg = $pos";
-                    $card = $this->game->getObjectFromDB($sql);
-                    if ($card) {
-                        $nextPos = $pos + 1;
-                        $sqlBelow = "SELECT count(*) FROM card WHERE card_location = 'waiting_room' AND card_location_arg = $nextPos";
-                        if ((int)$this->game->getUniqueValueFromDB($sqlBelow) === 0) {
-                            $this->game->cards->moveCard((int)$card['card_id'], 'waiting_room', $nextPos);
-                            $moved = true;
-                        }
-                    }
+            $minPos = $col * 10;
+            $maxPos = $col * 10 + 9;
+            $sql = "SELECT * FROM card WHERE card_location = 'waiting_room' AND card_location_arg BETWEEN $minPos AND $maxPos ORDER BY card_location_arg ASC, card_id ASC";
+            $columnCards = array_values($this->game->getCollectionFromDb($sql));
+            $count = count($columnCards);
+            foreach ($columnCards as $index => $cRow) {
+                $targetRow = 4 - ($count - 1 - $index);
+                $targetPos = $col * 10 + $targetRow;
+                if ((int)$cRow['card_location_arg'] !== $targetPos) {
+                    $this->game->cards->moveCard((int)$cRow['card_id'], 'waiting_room', $targetPos);
+                    $moved = true;
                 }
             }
         }
@@ -54,10 +51,10 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
             ]);
         }
 
-        // 2. Refill Waiting Room
+        // 2. Refill Waiting Room from bottom to top (row 4 up to row 1) so no gaps occur even if deck runs low
         $refilledCards = [];
         for ($col = 1; $col <= 2; $col++) {
-            for ($row = 1; $row <= 4; $row++) {
+            for ($row = 4; $row >= 1; $row--) {
                 $pos = $col * 10 + $row;
                 $sql = "SELECT count(*) FROM card WHERE card_location = 'waiting_room' AND card_location_arg = $pos";
                 if ((int)$this->game->getUniqueValueFromDB($sql) === 0) {
@@ -71,27 +68,22 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
         
         if (!empty($refilledCards)) {
             $this->game->bga->notify->all("waitingRoomRefilled", clienttranslate('New passengers enter the Waiting Room queue'), [
-                'newCards' => $refilledCards
+                'newCards' => $refilledCards,
+                'waitingRoom' => array_values($this->game->cards->getCardsInLocation('waiting_room'))
             ]);
         }
 
         // 4. Baby Priority
         $this->game->applyBabyPriority();
 
-        // 3. Refill Garage
-        $newGarageBuses = [];
-        for ($i = 1; $i <= 4; $i++) {
-            $sql = "SELECT count(*) FROM card WHERE card_location = 'garage' AND card_location_arg = $i";
-            if ($this->game->getUniqueValueFromDB($sql) == 0) {
-                $bus = $this->game->cards->pickCard('bus', 'garage', $i);
-                if ($bus) {
-                    $newGarageBuses[] = $bus;
-                }
-            }
-        }
-        if (!empty($newGarageBuses)) {
+        // 3. Refill Garage (Slide down and refill empty slots from bottom to top)
+        $garageResult = $this->game->slideAndRefillGarage();
+        $newGarageBuses = $garageResult['newBuses'] ?? [];
+        $garageSlid = !empty($garageResult['slid']);
+        if (!empty($newGarageBuses) || $garageSlid) {
             $this->game->bga->notify->all("garageRefilled", clienttranslate('The Garage is refilled with new buses'), [
-                'newBuses' => $newGarageBuses
+                'newBuses' => $newGarageBuses,
+                'garage' => array_values($this->game->cards->getCardsInLocation('garage'))
             ]);
         }
 

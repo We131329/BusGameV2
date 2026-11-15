@@ -281,8 +281,10 @@ class Game extends \Bga\GameFramework\Table
     public function applyBabyPriority()
     {
         for ($col = 1; $col <= 2; $col++) {
-            $sql = "SELECT * FROM card WHERE card_location = 'waiting_room' AND card_location_arg LIKE '{$col}%' ORDER BY card_location_arg ASC";
-            $columnCards = $this->getCollectionFromDb($sql);
+            $minPos = $col * 10;
+            $maxPos = $col * 10 + 9;
+            $sql = "SELECT * FROM card WHERE card_location = 'waiting_room' AND card_location_arg BETWEEN $minPos AND $maxPos ORDER BY card_location_arg ASC, card_id ASC";
+            $columnCards = array_values($this->getCollectionFromDb($sql));
             
             $babies = [];
             $others = [];
@@ -294,17 +296,18 @@ class Game extends \Bga\GameFramework\Table
                 }
             }
             
-            if (!empty($babies)) {
-                // Re-arrange: babies at the bottom (row 4, 3, ...), others above
-                $newOrder = array_merge($others, $babies);
-                foreach ($newOrder as $index => $cRow) {
-                    $newRow = 4 - (count($newOrder) - 1 - $index);
-                    $newPos = $col * 10 + $newRow;
-                    if ((int)$cRow['card_location_arg'] != $newPos) {
-                        $this->cards->moveCard((int)$cRow['card_id'], 'waiting_room', $newPos);
-                    }
+            $newOrder = array_merge($others, $babies);
+            $changed = false;
+            foreach ($newOrder as $index => $cRow) {
+                $newRow = 4 - (count($newOrder) - 1 - $index);
+                $newPos = $col * 10 + $newRow;
+                if ((int)$cRow['card_location_arg'] !== $newPos) {
+                    $this->cards->moveCard((int)$cRow['card_id'], 'waiting_room', $newPos);
+                    $changed = true;
                 }
-                
+            }
+            
+            if (!empty($babies) || $changed) {
                 $this->bga->notify->all("babiesPrioritized", clienttranslate('Babies move to the front of the queue in column ${col}'), [
                     'col' => $col,
                     'waitingRoom' => array_values($this->cards->getCardsInLocation('waiting_room'))
@@ -519,6 +522,42 @@ class Game extends \Bga\GameFramework\Table
         ]);
 
         return 'refill';
+    }
+
+    public function slideAndRefillGarage(): array
+    {
+        // 1. Slide remaining garage cards down towards position 4
+        $slid = false;
+        for ($i = 0; $i < 3; $i++) {
+            for ($pos = 3; $pos >= 1; $pos--) {
+                $card = $this->getObjectFromDB("SELECT * FROM card WHERE card_location = 'garage' AND card_location_arg = $pos");
+                if ($card) {
+                    $nextPos = $pos + 1;
+                    $countBelow = (int)$this->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_location = 'garage' AND card_location_arg = $nextPos");
+                    if ($countBelow === 0) {
+                        $this->cards->moveCard((int)$card['card_id'], 'garage', $nextPos);
+                        $slid = true;
+                    }
+                }
+            }
+        }
+
+        // 2. Refill empty positions from bottom to top (4 down to 1) from deck
+        $newGarageBuses = [];
+        for ($pos = 4; $pos >= 1; $pos--) {
+            $count = (int)$this->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_location = 'garage' AND card_location_arg = $pos");
+            if ($count === 0) {
+                $bus = $this->cards->pickCard('bus', 'garage', $pos);
+                if ($bus) {
+                    $newGarageBuses[] = $bus;
+                }
+            }
+        }
+
+        return [
+            'slid' => $slid,
+            'newBuses' => $newGarageBuses,
+        ];
     }
 
     public function debug_goToState(int $state = 3) {

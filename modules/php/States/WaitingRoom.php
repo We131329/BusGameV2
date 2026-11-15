@@ -208,16 +208,22 @@ class WaitingRoom extends GameState
 
     function zombie(int $playerId) {
         $busId = (int) $this->game->getGameStateValue('active_bus_id');
-        $eligible = [];
+        $babies = [];
+        $others = [];
         for ($col = 1; $col <= 2; $col++) {
             $minPos = $col * 10;
             $maxPos = $col * 10 + 9;
-            $sql = "SELECT card_id FROM card WHERE card_location = 'waiting_room' AND card_location_arg BETWEEN $minPos AND $maxPos ORDER BY card_location_arg DESC LIMIT 1";
-            $pId = $this->game->getUniqueValueFromDB($sql);
-            if ($pId && $this->game->getBoardingError($busId, (int)$pId) === null) {
-                $eligible[] = (int)$pId;
+            $sql = "SELECT card_id, card_type_arg FROM card WHERE card_location = 'waiting_room' AND card_location_arg BETWEEN $minPos AND $maxPos ORDER BY card_location_arg DESC LIMIT 1";
+            $row = $this->game->getObjectFromDB($sql);
+            if ($row && $this->game->getBoardingError($busId, (int)$row['card_id']) === null) {
+                if ((int)$row['card_type_arg'] % 10 === PASSENGER_BABY) {
+                    $babies[] = (int)$row['card_id'];
+                } else {
+                    $others[] = (int)$row['card_id'];
+                }
             }
         }
+        $eligible = array_merge($babies, $others);
         if (!empty($eligible)) {
             return $this->actBoardPassengers(implode(',', $eligible));
         }
