@@ -198,6 +198,7 @@ class EndScore extends \Bga\GameFramework\States\GameState
         $this->game->bga->notify->all("newRound", clienttranslate('Starting Round 2!'), [
             'garage' => array_values($this->game->cards->getCardsInLocation('garage')),
             'waiting_room' => array_values($this->game->cards->getCardsInLocation('waiting_room')),
+            'deck_counts' => $this->game->getDeckCounts(),
         ]);
 
         // 8. Notify each player about their private hand

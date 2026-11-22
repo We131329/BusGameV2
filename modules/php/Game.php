@@ -124,6 +124,14 @@ class Game extends \Bga\GameFramework\Table
         return (int) round($progression);
     }
 
+    public function getDeckCounts(): array
+    {
+        return [
+            'bus' => (int) $this->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_type = 'bus' AND card_location = 'deck'"),
+            'passenger' => (int) $this->getUniqueValueFromDB("SELECT COUNT(*) FROM card WHERE card_type = 'passenger' AND card_location = 'deck'"),
+        ];
+    }
+
     protected function getAllDatas(int $currentPlayerId): array
     {
         $result = [];
@@ -155,6 +163,7 @@ class Game extends \Bga\GameFramework\Table
         $result["unhappies_zone"] = array_values($this->cards->getCardsInLocation('unhappies'));
         $result["departed_buses"] = array_values($this->cards->getCardsInLocation('departed_buses'));
 
+        $result["deck_counts"] = $this->getDeckCounts();
         $result["passenger_types"] = $this->passenger_types;
         $result["bus_capacities"] = $this->bus_capacities;
 

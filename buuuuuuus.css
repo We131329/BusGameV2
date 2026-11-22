@@ -99,6 +99,81 @@
     width: 70%;
 }
 
+/* Deck Slots & Face-down Horizontal Deck Cards (above Waiting Room & Garage) */
+.buu_deck-slot {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #B6DCFC;
+    padding: 8px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    box-sizing: border-box;
+}
+
+#right-side .buu_deck-slot {
+    width: 70%;
+}
+
+.buu_deck-card {
+    width: 130px;
+    height: 90px;
+    position: relative;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.25);
+    cursor: help;
+}
+
+.buu_deck-card::before {
+    content: '';
+    position: absolute;
+    width: 90px;
+    height: 130px;
+    top: -20px;
+    left: 20px;
+    background-image: url('img/back_cards.png');
+    background-size: 100% 200%;
+    transform: rotate(-90deg);
+    transform-origin: center center;
+    border-radius: 6px;
+    pointer-events: none;
+}
+
+/* Row 1: Bus deck back (above Garage) */
+.buu_deck-card.buu_deck-bus::before {
+    background-position: 0% 0%;
+}
+
+/* Row 2: Passenger deck back (above Waiting Room) */
+.buu_deck-card.buu_deck-passenger::before {
+    background-position: 0% 100%;
+}
+
+.buu_deck-count-badge {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.85);
+    background: rgba(0, 0, 0, 0.78);
+    color: #fff;
+    font-weight: bold;
+    font-size: 18px;
+    padding: 4px 12px;
+    border-radius: 14px;
+    opacity: 0;
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
+    z-index: 2;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.buu_deck-card:hover .buu_deck-count-badge {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
 /* Responsive Layout - Preserving 3 columns layout on all screens */
 @media (max-width: 900px) {
     #bottom-layout {
@@ -106,7 +181,8 @@
         gap: 8px;
     }
 
-    #garage {
+    #garage,
+    #right-side .buu_deck-slot {
         width: 95%;
     }
 

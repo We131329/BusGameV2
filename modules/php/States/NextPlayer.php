@@ -69,7 +69,8 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
         if (!empty($refilledCards)) {
             $this->game->bga->notify->all("waitingRoomRefilled", clienttranslate('New passengers enter the Waiting Room queue'), [
                 'newCards' => $refilledCards,
-                'waitingRoom' => array_values($this->game->cards->getCardsInLocation('waiting_room'))
+                'waitingRoom' => array_values($this->game->cards->getCardsInLocation('waiting_room')),
+                'deck_counts' => $this->game->getDeckCounts(),
             ]);
         }
 
@@ -83,7 +84,8 @@ class NextPlayer extends \Bga\GameFramework\States\GameState
         if (!empty($newGarageBuses) || $garageSlid) {
             $this->game->bga->notify->all("garageRefilled", clienttranslate('The Garage is refilled with new buses'), [
                 'newBuses' => $newGarageBuses,
-                'garage' => array_values($this->game->cards->getCardsInLocation('garage'))
+                'garage' => array_values($this->game->cards->getCardsInLocation('garage')),
+                'deck_counts' => $this->game->getDeckCounts(),
             ]);
         }
 

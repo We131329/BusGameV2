@@ -805,6 +805,11 @@ export class Game {
                 <div id="bottom-layout">
                     <div id="left-side">
                         <h3>Waiting Room</h3>
+                        <div id="waiting-room-deck-slot" class="buu_deck-slot">
+                            <div id="waiting-room-deck" class="buu_deck-card buu_deck-passenger">
+                                <span id="waiting-room-deck-count" class="buu_deck-count-badge"></span>
+                            </div>
+                        </div>
                         <div id="waiting-room"></div>
                     </div>
                     <div id="center-side">
@@ -813,6 +818,11 @@ export class Game {
                     </div>
                     <div id="right-side">
                         <h3>Garage</h3>
+                        <div id="garage-deck-slot" class="buu_deck-slot">
+                            <div id="garage-deck" class="buu_deck-card buu_deck-bus">
+                                <span id="garage-deck-count" class="buu_deck-count-badge"></span>
+                            </div>
+                        </div>
                         <div id="garage"></div>
                     </div>
                 </div>
@@ -862,6 +872,7 @@ export class Game {
         
         // Render initial cards
         this.renderCards(gamedatas);
+        this.updateDeckVisuals(gamedatas.deck_counts);
 
         // Setup help button
         this.setupHelp();
@@ -871,6 +882,50 @@ export class Game {
 
         this.setupTooltips();
 
+    }
+
+    updateDeckVisuals(deckCounts) {
+        if (!deckCounts) return;
+        if (this.gamedatas) {
+            this.gamedatas.deck_counts = deckCounts;
+        }
+
+        const passCount = Number(deckCounts.passenger ?? 0);
+        const busCount = Number(deckCounts.bus ?? 0);
+
+        const wrDeckSlot = document.getElementById('waiting-room-deck-slot');
+        const wrDeckEl = document.getElementById('waiting-room-deck');
+        const wrDeckCountEl = document.getElementById('waiting-room-deck-count');
+        if (wrDeckEl && wrDeckSlot) {
+            if (passCount > 0) {
+                wrDeckSlot.style.display = 'flex';
+                if (wrDeckCountEl) wrDeckCountEl.textContent = String(passCount);
+                const passText = _('Passengers Deck: ${count} cards remaining').replace('${count}', passCount);
+                wrDeckEl.setAttribute('title', passText);
+                if (this.bga?.gameui?.addTooltip) {
+                    this.bga.gameui.addTooltip('waiting-room-deck', `<b>${passText}</b>`, '');
+                }
+            } else {
+                wrDeckSlot.style.display = 'none';
+            }
+        }
+
+        const garageDeckSlot = document.getElementById('garage-deck-slot');
+        const garageDeckEl = document.getElementById('garage-deck');
+        const garageDeckCountEl = document.getElementById('garage-deck-count');
+        if (garageDeckEl && garageDeckSlot) {
+            if (busCount > 0) {
+                garageDeckSlot.style.display = 'flex';
+                if (garageDeckCountEl) garageDeckCountEl.textContent = String(busCount);
+                const busText = _('Buses Deck: ${count} cards remaining').replace('${count}', busCount);
+                garageDeckEl.setAttribute('title', busText);
+                if (this.bga?.gameui?.addTooltip) {
+                    this.bga.gameui.addTooltip('garage-deck', `<b>${busText}</b>`, '');
+                }
+            } else {
+                garageDeckSlot.style.display = 'none';
+            }
+        }
     }
 
     setupTooltips() {
@@ -1601,6 +1656,9 @@ export class Game {
     }
 
     notif_garageRefilled(args) {
+        if (args.deck_counts) {
+            this.updateDeckVisuals(args.deck_counts);
+        }
         if (args.garage) {
             if (this.gamedatas) this.gamedatas.garage = args.garage;
             document.getElementById('garage').innerHTML = '';
@@ -1745,6 +1803,9 @@ export class Game {
     }
 
     notif_waitingRoomRefilled(args) {
+        if (args.deck_counts) {
+            this.updateDeckVisuals(args.deck_counts);
+        }
         if (args.waitingRoom) {
             this.syncWaitingRoomDom(args.waitingRoom);
         } else if (args.newCards) {
@@ -1876,6 +1937,9 @@ export class Game {
 
     notif_newRound(args) {
         this.clearBoard();
+        if (args.deck_counts) {
+            this.updateDeckVisuals(args.deck_counts);
+        }
         if (this.gamedatas) {
             this.gamedatas.garage = args.garage || [];
             this.gamedatas.waiting_room = args.waiting_room || [];
